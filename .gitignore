@@ -37,7 +37,7 @@ low.jpg
 *.webp
 
 # Portable Network Graphics
-*.png
+# *.png
 
 # Animated Portable Network Graphics
 *.apng
@@ -54,7 +54,7 @@ low.jpg
 *.svgz
 
 # Portable Document Format
-*.pdf
+# *.pdf
 
 # X BitMap
 *.xbm
