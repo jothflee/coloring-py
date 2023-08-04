@@ -60,15 +60,74 @@ def index():
     pdf_files = [f for f in os.listdir('pdfs') if f.endswith('.pdf')]
 
     # Generate a list of anchors linking to the PDF files
-    anchors = '<br>'.join(
-        [f'<a href="/pdf/{f}">{f}</a><br>' for f in pdf_files])
+    anchors = ''.join(
+        [f'<li><a href="/pdf/{f}">{f}</a></li>' for f in pdf_files])
+
+    # Add some basic styles
+    style = """
+    <style>
+    body {
+        font-family: Arial, sans-serif;
+        font-size: 16px;
+        line-height: 1.5;
+        margin: 0;
+        padding: 0;
+        background-color: #f5f5f5;
+    }
+    a {
+        color: #007bff;
+        text-decoration: none;
+    }
+    a:hover {
+        text-decoration: underline;
+    }
+    hr {
+        border: none;
+        border-top: 1px solid #ccc;
+        margin: 1em 0;
+    }
+    .container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 1em;
+        background-color: #fff;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    h1, h2 {
+        margin-top: 0;
+    }
+    ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+    li {
+        margin-bottom: 0.5em;
+    }
+    </style>
+    """
 
     return f"""
-    <html><body>
-    <a href='/generate'>generate one page</a><br>
-    <a href='/pdfgen'>generate a pdf</a><br>
-    {anchors}
-    </body></html>
+    <html>
+    <head>
+    <title>coloring-py</title>
+    {style}
+    </head>
+    <body>
+    <div class="container">
+        <h1>coloring-py</h1>
+        <ul>
+            <li><a href='/generate'>Generate One Page</a></li>
+            <li><a href='/pdfgen'>Generate a PDF</a></li>
+        </ul>
+        <hr>
+        <h2>PDF Files:</h2>
+        <ul>
+            {anchors}
+        </ul>
+    </div>
+    </body>
+    </html>
     """
 # Define a Flask route for the /pdf URL with a filename parameter
 
@@ -232,7 +291,8 @@ def generate_image(num_images=1):
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "user", "content": f"Given the following JSON array of captions: {img_prompts}"},
-                {"role": "user", "content": "Generate a short, 3 or 4 word, uplifting title of the book that contains these pictures."},
+                {"role": "user", "content": "Generate a short, no more than 6 word, uplifting title of the book that contains these pictures."},
+                {"role": "user", "content": "The title should be exciting and not use the words: nature or nature's."},
             ],
             max_tokens=150
         )
