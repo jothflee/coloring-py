@@ -3,7 +3,6 @@ FROM python:3-slim
 
 # Set the working directory to /app
 WORKDIR /app
-RUN pip install gunicorn
 # Copy the current directory contents into the container at /app
 COPY ./requirements.txt requirements.txt
 
@@ -13,4 +12,4 @@ RUN pip install --trusted-host pypi.python.org --no-cache-dir -r requirements.tx
 COPY . .
 
 # Run app.py when the container launches
-CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:8080", "--bind", "0.0.0.0:8443", "--env", "FLASK_ENV=production"]
+CMD ["python", "app.py"]
