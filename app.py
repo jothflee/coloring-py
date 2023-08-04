@@ -10,6 +10,8 @@ from PIL import Image
 from io import BytesIO
 from pdf import create_pdf_pages
 import logging
+from flask_basicauth import BasicAuth
+
 
 # Set the DEBUG_GENERATE and DEBUG_PDF flags to False
 DEBUG_GENERATE = False
@@ -17,6 +19,12 @@ DEBUG_PDF = False
 
 # Create a Flask app instance
 app = Flask(__name__)
+the_port = 80
+# Check if the SSL certificates are available
+if os.path.exists('/certs/server.key') and os.path.exists('/certs/server.pem'):
+    # Add SSL context to the app
+    app.ssl_context = ('/certs/server.pem', '/certs/server.key')
+    the_port = 443
 
 # Set the OpenAI API key
 openai.api_key = os.environ['OPENAI_API_KEY']
@@ -25,8 +33,13 @@ openai.api_key = os.environ['OPENAI_API_KEY']
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(levelname)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 
+app.config['BASIC_AUTH_USERNAME'] = 'username'
+app.config['BASIC_AUTH_PASSWORD'] = 'password'
+basic_auth = BasicAuth(app)
 
 # Define a Flask route for the root URL
+
+
 @app.route('/')
 def index():
     return """
@@ -39,6 +52,7 @@ def index():
 
 # Define a Flask route for the /pdf URL
 @app.route('/pdf')
+@basic_auth.required
 def generate_pdf_route():
     # Generate the PDF using the generate_pdf function
     pdf_bytes = generate_pdf()
@@ -54,6 +68,7 @@ def generate_pdf_route():
 
 # Define a Flask route for the /debug URL
 @app.route('/debug', methods=['GET'])
+@basic_auth.required
 def debug():
     # Generate an image using the generate_image function
     generated_image = generate_image()
@@ -64,6 +79,7 @@ def debug():
 
 # Define a Flask route for the /generate URL
 @app.route('/generate', methods=['GET'])
+@basic_auth.required
 def generate():
     # Generate an image using the generate_image function
     generated_images = generate_image()
@@ -215,4 +231,4 @@ def generate_pdf(num_pages=20) -> bytes:
 
 # If this script is run directly, start the Flask app
 if __name__ == '__main__':
-    app.run(debug=False)
+    app.run(debug=False, port=the_port)
