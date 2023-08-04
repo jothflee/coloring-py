@@ -20,6 +20,8 @@ jobs:
           cache: 'pip' # caching pip dependencies
       - name: Python Semantic Release
         id: release
+        env: 
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python3 -m pip install python-semantic-release
           semantic-release version
