@@ -1,7 +1,7 @@
 import io
 import json
 import pickle
-from flask import Flask, render_template_string, send_file
+from flask import Flask, render_template_string, send_file, send_file, abort, url_for
 import openai
 import base64
 import os
@@ -47,21 +47,45 @@ if username and password:
 
 basic_auth = BasicAuth(app)
 
+os.makedirs("./pdfs", exist_ok=True)
+
 # Define a Flask route for the root URL
 
 
 @app.route('/')
 def index():
+    # Get a list of PDF files in the pdfs directory
+    pdf_files = [f for f in os.listdir('pdfs') if f.endswith('.pdf')]
+
+    # Generate a list of anchors linking to the PDF files
+    anchors = '<br>'.join(
+        [f'<a href="/pdf/{f}">{f}</a><br>' for f in pdf_files])
+
     return """
     <html><body>
     <a href='/generate'>generate one page</a><br>
-    <a href='/pdf'>generate a pdf</a>
+    <a href='/pdfgen'>generate a pdf</a>
     </body></html>
     """
+# Define a Flask route for the /pdf URL with a filename parameter
 
 
-# Define a Flask route for the /pdf URL
-@app.route('/pdf')
+@app.route('/pdf/<path:filename>')
+def get_pdf(filename):
+    # Get the full path to the PDF file
+    filepath = os.path.join('pdfs', filename)
+
+    # Check if the file exists and is a PDF
+    if not os.path.isfile(filepath) or not filepath.endswith('.pdf'):
+        abort(404)
+
+    # Return the PDF file to the client
+    return send_file(filepath, mimetype='application/pdf')
+
+# Define a Flask route for the /pdfgen URL
+
+
+@app.route('/pdfgen')
 @basic_auth.required
 def generate_pdf_route():
     # Generate the PDF using the generate_pdf function
@@ -81,7 +105,7 @@ def generate_pdf_route():
 @basic_auth.required
 def debug():
     # Generate an image using the generate_image function
-    generated_image = generate_image()
+    _, generated_image = generate_image()
 
     # Return the generated image as a response
     return generated_image
@@ -92,7 +116,7 @@ def debug():
 @basic_auth.required
 def generate():
     # Generate an image using the generate_image function
-    generated_images = generate_image()
+    _, generated_images = generate_image()
 
     if len(generated_images) == 0:
         return "No images generated"
@@ -142,60 +166,66 @@ class GeneratedImage:
         self.prompt = prompt
 
 
+image_cache = []
+
 # Define a function called generate_image that generates a list of GeneratedImage objects using DALL-E
+
+
 def generate_image(num_images=1):
-    # Define a list of messages to send to OpenAI's chat API to generate prompts
-    messages = [
-        {"role": "user", "content": "Output the generated prompts as a JSON array of strings."},
-        {"role": "user", "content": "Generate dalle prompts to generate portrait oriented images of life's beauty, things like: animals, space, planets, comets, stars and the earth, anything that is natural and beautiful."},
-        {"role": "user", "content": "Each prompt will be 10 words or less."},
-        {"role": "user", "content": "Example of a prompt: A graceful deer dances through a sunlit meadow of wildflowers."},
-        {"role": "user",
-            "content": f"Only generate enough prompts to make the length of the JSON array {num_images}."},
-    ]
+    if len(image_cache) < num_images:
+        # Define a list of messages to send to OpenAI's chat API to generate prompts
+        messages = [
+            {"role": "user", "content": f"Generate a JSON array of {num_images} dalle prompts describing portrait oriented images of life's beauty, things like: animals, space, planets, comets, stars and the earth, anything that is natural and beautiful."},
+            {"role": "user", "content": "Each prompt will be 10 words or less."},
+            {"role": "user", "content": f"Output only a JSON array of strings with a length of {num_images}."},
 
-    # Send the messages to OpenAI's chat API to generate prompts
-    prompt_response = openai.ChatCompletion.create(
-        # You may need to update the engine depending on the latest available version
-        model="gpt-3.5-turbo",
-        messages=messages,
-        max_tokens=150*num_images
-    )
+        ]
 
-    # Parse the generated prompts from the response
-    prompts_response = prompt_response.choices[0].message.content
-    logging.debug("Generated prompts: %s", prompts_response)
-
-    try:
-        prompts = json.loads(prompts_response)
-    except json.JSONDecodeError as e:
-        print(f"Error decoding JSON: {e}")
-        prompts = []
-    # Generate an image for each prompt using DALL-E
-    imgs = []
-    for prompt in prompts:
-        # Generate the image using DALL-E
-        response = openai.Image.create(
-            prompt=f'{prompt} As a complex coloring page, outlines only, in black and white or grey scale.',
-            n=1,
-            size='512x512',
+        # Send the messages to OpenAI's chat API to generate prompts
+        prompt_response = openai.ChatCompletion.create(
+            # You may need to update the engine depending on the latest available version
+            model="gpt-3.5-turbo",
+            messages=messages,
+            max_tokens=150*num_images
         )
 
-        # Get the image data and encode it as base64
-        image_response = requests.get(response['data'][0]['url']).content
-        low_res_img = Image.open(BytesIO(image_response))
+        # Parse the generated prompts from the response
+        prompts_response = prompt_response.choices[0].message.content
+        logging.debug("Generated prompts: %s", prompts_response)
 
-        # Create a new GeneratedImage object and add it to the list of images
-        imgs.append(GeneratedImage(low_res_img, prompt, prompt))
-        logging.debug("Generated image with prompt '%s'", prompt)
+        try:
+            prompts = json.loads(prompts_response)
+        except json.JSONDecodeError as e:
+            print(f"Error decoding JSON: {e}")
+            prompts = []
+        # Generate an image for each prompt using DALL-E
 
+        for prompt in prompts:
+            # Generate the image using DALL-E
+            response = openai.Image.create(
+                prompt=f'{prompt} As a complex coloring page, outlines only.',
+                n=1,
+                size='512x512',
+            )
+
+            # Get the image data and encode it as base64
+            image_response = requests.get(response['data'][0]['url']).content
+            low_res_img = Image.open(BytesIO(image_response))
+
+            # Create a new GeneratedImage object and add it to the list of images
+            image_cache.append(GeneratedImage(low_res_img, prompt))
+            logging.debug("Generated image with prompt '%s'", prompt)
+    imgs = image_cache[:num_images]
+    del image_cache[:num_images]
+    print("image_cache:", len(image_cache))
     the_title = None
-    if len(prompts) > 0:
+    img_prompts = [image.prompt for image in imgs]
+    if len(img_prompts) > 1:
         title_response = openai.ChatCompletion.create(
             # You may need to update the engine depending on the latest available version
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "user", "content": "Given the following JSON array of captions: {prompts_response}"},
+                {"role": "user", "content": f"Given the following JSON array of captions: {img_prompts}"},
                 {"role": "user", "content": "Generate a short, 3 or 4 word, uplifting title of the book that contains these pictures."},
             ],
             max_tokens=150
@@ -203,6 +233,7 @@ def generate_image(num_images=1):
 
         # Parse the generated prompts from the response
         the_title = title_response.choices[0].message.content
+        logging.debug(f"Generated title: {the_title}")
 
     # Return the the_title and the list of generated images
     return the_title, imgs
@@ -221,7 +252,7 @@ Add comments to explain each line.
 # Define a function called generate_pdf that takes an optional argument num_pages and returns a buffer of bytes
 
 
-def generate_pdf(num_pages=20) -> bytes:
+def generate_pdf(num_pages=20) -> (str, bytes):
     logging.debug("Generating PDF with %d pages", num_pages)
 
     # Generate a list of GeneratedImage objects
@@ -252,7 +283,7 @@ def generate_pdf(num_pages=20) -> bytes:
     # Generate the PDF using the create_pdf_pages function
     pdf_bytes = create_pdf_pages(pages)
     logging.debug("Generated PDF with %d bytes", len(pdf_bytes))
-    with open(f'{the_title}.pdf', 'wb') as f:
+    with open(f'./pdfs/{the_title}.pdf', 'wb') as f:
         f.write(pdf_bytes)
 
     # Return the PDF as a buffer of bytes
