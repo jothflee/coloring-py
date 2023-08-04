@@ -23,4 +23,4 @@ jobs:
         id: release
         run: |
           python3 -m pip install semantic-release
-          semantic-release version
+          /usr/local/bin/semantic-release version
