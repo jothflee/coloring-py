@@ -2,7 +2,18 @@
 
 
 
-## v0.2.0 (2023-08-03)
+## v0.3.0 (2023-08-03)
+
+### Feature
+
+* feat: semantic releaser w/ cache ([`120f22a`](https://github.com/jothflee/coloring-py/commit/120f22a2edf60d447efcd56eaf2d91747146c8a5))
+
+* feat: semantic releaser w/ cache ([`4f86970`](https://github.com/jothflee/coloring-py/commit/4f86970db153316cff3f9271b52a40598d582dd0))
+
+* feat: semantic releaser w/ cache ([`fad486b`](https://github.com/jothflee/coloring-py/commit/fad486bf273a655ac325a7a4d4468ee0759d2e27))
+
+
+## v0.2.0 (2023-08-04)
 
 ### Feature
 
