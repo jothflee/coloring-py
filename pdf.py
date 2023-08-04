@@ -30,6 +30,7 @@ pdf_bytes = create_pdf_pages(pages)
 
 
 from io import BytesIO
+import textwrap
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas
@@ -78,7 +79,12 @@ def create_pdf_pages(pages):
                       image_y, image_width, image_height)
         pdf.setFillColor(grey)
         pdf.setFont(font, 18)
-        pdf.drawCentredString(page_width / 2, caption_y, page.prompt)
+        # Word wrap the caption
+        lines = textwrap.wrap(page.prompt, width=50)
+        y = caption_y
+        for line in lines:
+            pdf.drawCentredString(page_width / 2, y, line)
+            y -= 20
 
         # Add a new page if this is not the last page
         if i < len(pages) - 1:
