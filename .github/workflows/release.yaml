@@ -23,5 +23,5 @@ jobs:
         id: release
         run: |
           python3 -m pip install semantic-release
-          ls $(python3 -m site --user-base)/bin
-          ls python3 -c "from pip._internal.locations import bin_py; print(bin_py)"
+          ls `python3 -c "from pip._internal.locations import bin_py; print(bin_py)"``
+          `python3 -c "from pip._internal.locations import bin_py; print(bin_py)"`/semantic-release version
