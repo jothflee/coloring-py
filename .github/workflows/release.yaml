@@ -21,6 +21,5 @@ jobs:
       - name: Python Semantic Release
         id: release
         run: |
-          pip install semantic-release
-          ls /opt/hostedtoolcache/Python/3.10.12/x64/bin
-          /opt/hostedtoolcache/Python/3.10.12/x64/bin/semantic-release version
+          python3 -m pip install python-semantic-release
+          semantic-release version
