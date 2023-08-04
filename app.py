@@ -238,8 +238,8 @@ def generate_image(num_images=1):
         needed_images = num_images - len(image_cache)
         # Define a list of messages to send to OpenAI's chat API to generate prompts
         messages = [
-            {"role": "user", "content": f"Generate a JSON array of {needed_images} dalle prompts describing images of life's beauty, things like: animals, space, planets, comets, stars and the earth, anything that is natural and beautiful."},
-            {"role": "user", "content": "Each prompt will be 10 words or less. Do not mention specific colors, these are coloring pages."},
+            {"role": "user", "content": f"Generate a JSON array of {needed_images} dalle prompts describing images of life's beauty, things like: nature, animals, math, geometry, science, checmistry, physics, space, planets, comets, stars and the earth, anything that is safe, real, and beautiful."},
+            {"role": "user", "content": "Each prompt will be 15 words or less. Do not mention specific colors, these are coloring pages."},
             {"role": "user", "content": f"Output only one JSON array of strings with a length of {needed_images}."},
             {"role": "user",
                 "content": '["prompt #1", "prompt #2"]'},
@@ -268,7 +268,7 @@ def generate_image(num_images=1):
         for prompt in prompts:
             # Generate the image using DALL-E
             response = openai.Image.create(
-                prompt=f'{prompt} Only use colors in the outline. Do not fill. As a complex, new coloring book page.',
+                prompt=f'{prompt} Do not add text or letters. Only use colors in the outline. Do not fill. As a complex, new coloring book page.',
                 n=1,
                 size='512x512',
             )
