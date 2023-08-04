@@ -209,7 +209,7 @@ def generate_image(num_images=1):
         for prompt in prompts:
             # Generate the image using DALL-E
             response = openai.Image.create(
-                prompt=f'{prompt} As a complex, new coloring book page.',
+                prompt=f'{prompt} Only use colors in the outline. Do not fill. As a complex, new coloring book page.',
                 n=1,
                 size='512x512',
             )
