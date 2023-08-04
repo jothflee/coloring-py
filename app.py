@@ -20,10 +20,11 @@ DEBUG_PDF = False
 # Create a Flask app instance
 app = Flask(__name__)
 the_port = 80
+ssl_context = None
 # Check if the SSL certificates are available
 if os.path.exists('/certs/server.key') and os.path.exists('/certs/server.pem'):
     # Add SSL context to the app
-    app.ssl_context = ('/certs/server.pem', '/certs/server.key')
+    ssl_context = ('/certs/server.pem', '/certs/server.key')
     the_port = 443
 
 # Set the OpenAI API key
@@ -231,4 +232,5 @@ def generate_pdf(num_pages=20) -> bytes:
 
 # If this script is run directly, start the Flask app
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=False, port=the_port)
+    app.run(ssl_context=ssl_context, host='0.0.0.0',
+            debug=False, port=8443)
