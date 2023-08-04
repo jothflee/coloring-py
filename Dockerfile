@@ -14,4 +14,4 @@ RUN pip install --trusted-host pypi.python.org --no-cache-dir -r requirements.tx
 COPY . .
 
 # Run app.py when the container launches
-CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:8080", "--bind", "0.0.0.0:8443", "--env", "FLASK_ENV=production", "--keyfile", "/certs/server.key", "--certfile", "/certs/server.pem"]
+CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:8080", "--bind", "0.0.0.0:8443", "--env", "FLASK_ENV=production", "--keyfile", "/certs/server.key", "--certfile", "/certs/server.pem", "--workers", "8", "--preload"]
