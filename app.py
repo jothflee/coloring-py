@@ -12,6 +12,7 @@ from pdf import create_pdf_pages
 import logging
 from flask_basicauth import BasicAuth
 
+from utils import make_url_safe
 
 # Set the DEBUG_GENERATE and DEBUG_PDF flags to False
 DEBUG_GENERATE = False
@@ -19,6 +20,7 @@ DEBUG_PDF = False
 
 # Create a Flask app instance
 app = Flask(__name__)
+
 the_port = 8080
 ssl_context = None
 # Check if the SSL certificates are available
@@ -61,10 +63,11 @@ def index():
     anchors = '<br>'.join(
         [f'<a href="/pdf/{f}">{f}</a><br>' for f in pdf_files])
 
-    return """
+    return f"""
     <html><body>
     <a href='/generate'>generate one page</a><br>
-    <a href='/pdfgen'>generate a pdf</a>
+    <a href='/pdfgen'>generate a pdf</a><br>
+    {anchors}
     </body></html>
     """
 # Define a Flask route for the /pdf URL with a filename parameter
@@ -173,11 +176,14 @@ image_cache = []
 
 def generate_image(num_images=1):
     if len(image_cache) < num_images:
+        needed_images = num_images - len(image_cache)
         # Define a list of messages to send to OpenAI's chat API to generate prompts
         messages = [
-            {"role": "user", "content": f"Generate a JSON array of {num_images} dalle prompts describing portrait oriented images of life's beauty, things like: animals, space, planets, comets, stars and the earth, anything that is natural and beautiful."},
-            {"role": "user", "content": "Each prompt will be 10 words or less."},
-            {"role": "user", "content": f"Output only a JSON array of strings with a length of {num_images}."},
+            {"role": "user", "content": f"Generate a JSON array of {needed_images} dalle prompts describing images of life's beauty, things like: animals, space, planets, comets, stars and the earth, anything that is natural and beautiful."},
+            {"role": "user", "content": "Each prompt will be 10 words or less. Do not mention specific colors, these are coloring pages."},
+            {"role": "user", "content": f"Output only one JSON array of strings with a length of {needed_images}."},
+            {"role": "user",
+                "content": '["prompt #1", "prompt #2"]'},
 
         ]
 
@@ -186,7 +192,7 @@ def generate_image(num_images=1):
             # You may need to update the engine depending on the latest available version
             model="gpt-3.5-turbo",
             messages=messages,
-            max_tokens=150*num_images
+            max_tokens=150*needed_images
         )
 
         # Parse the generated prompts from the response
@@ -203,7 +209,7 @@ def generate_image(num_images=1):
         for prompt in prompts:
             # Generate the image using DALL-E
             response = openai.Image.create(
-                prompt=f'{prompt} As a complex coloring page, outlines only.',
+                prompt=f'{prompt} As a complex, new coloring book page.',
                 n=1,
                 size='512x512',
             )
@@ -233,6 +239,7 @@ def generate_image(num_images=1):
 
         # Parse the generated prompts from the response
         the_title = title_response.choices[0].message.content
+        the_title = make_url_safe(the_title)
         logging.debug(f"Generated title: {the_title}")
 
     # Return the the_title and the list of generated images
