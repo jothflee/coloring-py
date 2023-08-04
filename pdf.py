@@ -1,6 +1,6 @@
 
 '''
-Generate a Python function called `create_pdf_pages` and a class called Page that takes a list of a class that has 2 properties, image (as a PIL image) and caption (as a string).
+Generate a Python function called `create_pdf_pages` that takes a list of a class that has 2 properties, image (as a PIL image) and prompt (as a string).
 The function returns the pdf as a buffer of bytes 
 The function should generate a multi-page PDF with one page for each image and caption. 
 Each page should display the image and the corresponding caption. 
@@ -38,12 +38,6 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfbase import pdfmetrics
 from reportlab.lib.utils import ImageReader
 from PIL import Image
-class Page:
-    def __init__(self, image, caption):
-        self.image = image
-        self.caption = caption
-
-
 def create_pdf_pages(pages):
     # Define the font and font size
     font = 'Roboto'
@@ -84,7 +78,7 @@ def create_pdf_pages(pages):
                       image_y, image_width, image_height)
         pdf.setFillColor(grey)
         pdf.setFont(font, 18)
-        pdf.drawCentredString(page_width / 2, caption_y, page.caption)
+        pdf.drawCentredString(page_width / 2, caption_y, page.prompt)
 
         # Add a new page if this is not the last page
         if i < len(pages) - 1:
