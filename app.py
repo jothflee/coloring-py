@@ -231,4 +231,4 @@ def generate_pdf(num_pages=20) -> bytes:
 
 # If this script is run directly, start the Flask app
 if __name__ == '__main__':
-    app.run(debug=False, port=the_port)
+    app.run(host='0.0.0.0', debug=False, port=the_port)
