@@ -44,7 +44,7 @@ if username and password:
 basic_auth = BasicAuth(app)
 
 os.makedirs("./pdfs", exist_ok=True)
-os.makedirs('raws', exist_ok=True)
+os.makedirs('./raws', exist_ok=True)
 
 # Define a Flask route for the root URL
 
@@ -210,7 +210,7 @@ class GeneratedImage:
 
 def load_image_cache():
     # Get a list of all the pickled files in the raws directory
-    directory_path = 'raws'
+    directory_path = './raws'
     filenames = os.listdir(directory_path)
     return [os.path.join(directory_path, f) for f in filenames if f.endswith('.pickle')]
 
@@ -226,7 +226,7 @@ def generate_image(num_images=1):
         messages = [
             {"role": "user", "content": f"Generate a JSON array of {needed_images} dalle prompts describing images"},
             {"role": "user", "content": "Each prompt will be 15 words or less. Do not mention specific colors."},
-            {"role": "user", "content": "Chose a random, kid-safe topic, for example: nature, animals, math, geometry, science, checmistry, physics, space, planets, comets, stars and the earth."},
+            {"role": "user", "content": "Chose a random, safe topic, for example: nature, animals, math, geometry, science, checmistry, physics, space, planets, comets, stars and the earth."},
             {"role": "user", "content": "Keep a positive tone for each prompt."},
             {"role": "user", "content": "Chose a unique artistic style for each prompt."},
             {"role": "user", "content": "Choose a random detail and be sepcific in each prompt."},
@@ -257,7 +257,7 @@ def generate_image(num_images=1):
         for prompt in prompts:
             # Generate the image using DALL-E
             response = openai.Image.create(
-                prompt=f'{prompt} Do not add text or letters. Only use colors in the outline. Do not fill. As a complex, new coloring book page.',
+                prompt=f'{prompt} Do not add text or letters. Only use colors in the outline. Do not fill. Do not generate humans. As a complex, new coloring book page.',
                 n=1,
                 size='512x512',
             )
@@ -271,7 +271,7 @@ def generate_image(num_images=1):
 
             # Save the GeneratedImage object as a pickled file
             filename = f'{make_url_safe(image.prompt)}.pickle'
-            filepath = os.path.join('raws', filename)
+            filepath = os.path.join('./raws', filename)
             with open(filepath, 'wb') as f:
                 pickle.dump(image, f)
 
