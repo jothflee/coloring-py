@@ -1,7 +1,7 @@
 import io
 import json
 import pickle
-from flask import Flask, render_template_string, send_file, send_file, abort, url_for, redirect
+from flask import Flask, render_template_string, send_file, send_file, abort, redirect
 import openai
 import base64
 import os
@@ -24,6 +24,7 @@ DEBUG_PDF = False
 app = Flask(__name__)
 ip_ban = IpBan(persist=True, ban_count=5,
                ban_seconds=3600*24*7, ipc=True)
+
 ip_ban.init_app(app)
 
 # Set the OpenAI API key
@@ -296,7 +297,6 @@ def generate_image(num_images=1):
 
         # Parse the generated prompts from the response
         the_title = title_response.choices[0].message.content
-        the_title = make_url_safe(the_title)
         logging.debug(f"Generated title: {the_title}")
 
     # Return the the_title and the list of generated images
@@ -345,9 +345,11 @@ def generate_pdf(num_pages=20) -> (str, bytes):
                       i+1, generated_image.prompt)
 
     # Generate the PDF using the create_pdf_pages function
-    pdf_bytes = create_pdf_pages(pages)
+    pdf_bytes = create_pdf_pages(the_title, pages)
     logging.debug("Generated PDF with %d bytes", len(pdf_bytes))
-    with open(f'./pdfs/{the_title}.pdf', 'wb') as f:
+    file_name = make_url_safe(the_title)
+
+    with open(f'./pdfs/{file_name}.pdf', 'wb') as f:
         f.write(pdf_bytes)
 
     # Return the PDF as a buffer of bytes

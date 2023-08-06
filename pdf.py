@@ -39,7 +39,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfbase import pdfmetrics
 from reportlab.lib.utils import ImageReader
 from PIL import Image
-def create_pdf_pages(pages):
+def create_pdf_pages(title, pages):
     # Define the font and font size
     font = 'Roboto'
     pdfmetrics.registerFont(TTFont(font, 'Roboto-Regular.ttf'))
