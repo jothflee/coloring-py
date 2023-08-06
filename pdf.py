@@ -102,6 +102,12 @@ def create_pdf_pages(title, pages):
         if i < len(pages) - 1:
             pdf.showPage()
 
+    # Add the title to the PDF metadata
+    pdf.setTitle(title)
+    pdf.setProducer("coloring-py.jothflee.com")
+    pdf.setAuthor("DALL-E")
+    pdf.setCreator("coloring-py.jothflee.com")
+
     # Save the PDF document to a buffer
     pdf.save()
     pdf_buffer.seek(0)
