@@ -1,7 +1,7 @@
 import io
 import json
 import pickle
-from flask import Flask, render_template_string, send_file, send_file, abort, url_for
+from flask import Flask, render_template_string, send_file, send_file, abort, url_for, redirect
 import openai
 import base64
 import os
@@ -10,6 +10,7 @@ from PIL import Image
 from io import BytesIO
 from pdf import create_pdf_pages
 import logging
+import threading
 from flask_basicauth import BasicAuth
 
 from utils import make_url_safe
@@ -143,18 +144,15 @@ def get_pdf(filename):
 @basic_auth.required
 def generate_pdf_route():
     # Generate the PDF using the generate_pdf function
-    the_title, pdf_bytes = generate_pdf()
-
+    # Start a new thread to generate the PDF
+    thread = threading.Thread(target=generate_pdf_background)
+    thread.start()
     # Return the PDF as a download to the user
-    return send_file(
-        io.BytesIO(pdf_bytes),
-        mimetype='application/pdf',
-        as_attachment=True,
-        download_name=f'{the_title}.pdf'
-    )
-
+    return redirect('/')
 
 # Define a Flask route for the /debug URL
+
+
 @app.route('/debug', methods=['GET'])
 @basic_auth.required
 def debug():
@@ -230,11 +228,14 @@ def generate_image(num_images=1):
         needed_images = num_images - len(image_cache)
         # Define a list of messages to send to OpenAI's chat API to generate prompts
         messages = [
-            {"role": "user", "content": f"Generate a JSON array of {needed_images} dalle prompts describing images of life's beauty, things like: nature, animals, math, geometry, science, checmistry, physics, space, planets, comets, stars and the earth, anything that is safe, real, and beautiful."},
-            {"role": "user", "content": "Each prompt will be 15 words or less. Do not mention specific colors, these are coloring pages."},
+            {"role": "user", "content": f"Generate a JSON array of {needed_images} dalle prompts describing images"},
+            {"role": "user", "content": "Each prompt will be 15 words or less. Do not mention specific colors."},
+            {"role": "user", "content": "Chose a random, kid-safe topic, for example: nature, animals, math, geometry, science, checmistry, physics, space, planets, comets, stars and the earth."},
+            {"role": "user", "content": "Keep a positive tone for each prompt."},
+            {"role": "user", "content": "Chose a unique artistic style for each prompt."},
+            {"role": "user", "content": "Choose a random detail and be sepcific in each prompt."},
             {"role": "user", "content": f"Output only one JSON array of strings with a length of {needed_images}."},
-            {"role": "user",
-                "content": '["prompt #1", "prompt #2"]'},
+            {"role": "user", "content": '["prompt #1", "prompt #2"]'},
 
         ]
 
@@ -243,7 +244,7 @@ def generate_image(num_images=1):
             # You may need to update the engine depending on the latest available version
             model="gpt-3.5-turbo",
             messages=messages,
-            max_tokens=150*needed_images
+            max_tokens=150*needed_images,
         )
 
         # Parse the generated prompts from the response
@@ -349,9 +350,29 @@ def generate_pdf(num_pages=20) -> (str, bytes):
     return the_title, pdf_bytes
 
 
+def generate_pdf_background():
+    # Generate the PDF using the generate_pdf function
+    the_title, pdf_bytes = generate_pdf()
+
+    # Save the PDF to disk or upload to a cloud storage service
+    # ...
+
+    # Optionally send an email notification when the PDF is ready
+    # ...
+
+    # Log a message to indicate that the PDF is ready
+    print(f'PDF "{the_title}.pdf" is ready')
+
+
 # If this script is run directly, start the Flask app
 if __name__ == '__main__':
-    ssl_context = ('/certs/server.pem', '/certs/server.key')
+
+    certfile = '/certs/server.pem'
+    keyfile = '/certs/server.key'
+
+    ssl_context = None
+    if os.path.exists(certfile) and os.path.exists(keyfile):
+        ssl_context = (certfile, keyfile)
     the_port = int(os.environ.get('PORT', 8443))
     app.run(debug=False, host='0.0.0.0',
             port=the_port, ssl_context=ssl_context)

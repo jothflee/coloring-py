@@ -55,6 +55,11 @@ def create_pdf_pages(pages):
     pdf_buffer = BytesIO()
     pdf = canvas.Canvas(pdf_buffer, pagesize=letter)
 
+    # Add the title page
+    pdf.setFont(font, 36)
+    pdf.drawCentredString(page_width / 2, page_height / 2, title)
+    pdf.showPage()
+
     # Loop through each page and add the image and caption
     for i, page in enumerate(pages):
         # Calculate the position of the image and caption
