@@ -57,7 +57,14 @@ def create_pdf_pages(title, pages):
 
     # Add the title page
     pdf.setFont(font, 36)
-    pdf.drawCentredString(page_width / 2, page_height / 2, title)
+    pdf.setFillColor(grey)
+
+    lines = textwrap.wrap(title, width=25)
+    y = (page_height / 2) + 36
+    for line in lines:
+        pdf.drawCentredString(page_width / 2, y, line)
+        y -= 40
+
     pdf.showPage()
 
     # Loop through each page and add the image and caption

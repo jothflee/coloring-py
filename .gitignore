@@ -2,7 +2,7 @@ high.jpg
 low.jpg
 *.pickle
 pdfs/
-
+raws/
 # Created by https://www.toptal.com/developers/gitignore/api/python,linux,macos,images
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,linux,macos,images
 

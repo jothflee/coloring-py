@@ -9,3 +9,12 @@ def make_url_safe(text):
     # Convert to lowercase
     text = text.lower()
     return text
+
+
+def make_title_clean(text) -> str:
+    # Remove any leading or trailing whitespace
+    text = text.strip()
+    # Remove any leading or trailing hyphens
+    text = text.strip('-')
+    text = text.strip('"')
+    return text

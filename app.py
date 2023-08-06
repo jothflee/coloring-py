@@ -14,11 +14,7 @@ import threading
 from flask_basicauth import BasicAuth
 from flask_ipban import IpBan
 
-from utils import make_url_safe
-
-# Set the DEBUG_GENERATE and DEBUG_PDF flags to False
-DEBUG_GENERATE = False
-DEBUG_PDF = False
+from utils import make_title_clean, make_url_safe
 
 # Create a Flask app instance
 app = Flask(__name__)
@@ -48,6 +44,7 @@ if username and password:
 basic_auth = BasicAuth(app)
 
 os.makedirs("./pdfs", exist_ok=True)
+os.makedirs('raws', exist_ok=True)
 
 # Define a Flask route for the root URL
 
@@ -155,25 +152,13 @@ def generate_pdf_route():
     # Return the PDF as a download to the user
     return redirect('/')
 
-# Define a Flask route for the /debug URL
-
-
-@app.route('/debug', methods=['GET'])
-@basic_auth.required
-def debug():
-    # Generate an image using the generate_image function
-    _, generated_image = generate_image()
-
-    # Return the generated image as a response
-    return generated_image
-
 
 # Define a Flask route for the /generate URL
 @app.route('/generate', methods=['GET'])
 @basic_auth.required
 def generate():
     # Generate an image using the generate_image function
-    _, generated_images = generate_image()
+    generated_images = load_generated_images(generate_image())
 
     if len(generated_images) == 0:
         return "No images generated"
@@ -223,12 +208,18 @@ class GeneratedImage:
         self.prompt = prompt
 
 
-image_cache = []
+def load_image_cache():
+    # Get a list of all the pickled files in the raws directory
+    directory_path = 'raws'
+    filenames = os.listdir(directory_path)
+    return [os.path.join(directory_path, f) for f in filenames if f.endswith('.pickle')]
+
 
 # Define a function called generate_image that generates a list of GeneratedImage objects using DALL-E
-
-
 def generate_image(num_images=1):
+    image_cache = load_image_cache()
+    print("image_cache:", len(image_cache))
+
     if len(image_cache) < num_images:
         needed_images = num_images - len(image_cache)
         # Define a list of messages to send to OpenAI's chat API to generate prompts
@@ -275,32 +266,24 @@ def generate_image(num_images=1):
             image_response = requests.get(response['data'][0]['url']).content
             low_res_img = Image.open(BytesIO(image_response))
 
-            # Create a new GeneratedImage object and add it to the list of images
-            image_cache.append(GeneratedImage(low_res_img, prompt))
-            logging.debug("Generated image with prompt '%s'", prompt)
-    imgs = image_cache[:num_images]
-    del image_cache[:num_images]
-    print("image_cache:", len(image_cache))
-    the_title = None
-    img_prompts = [image.prompt for image in imgs]
-    if len(img_prompts) > 1:
-        title_response = openai.ChatCompletion.create(
-            # You may need to update the engine depending on the latest available version
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "user", "content": f"Given the following JSON array of captions: {img_prompts}"},
-                {"role": "user", "content": "Generate a short, no more than 6 word, uplifting title of the book that contains these pictures."},
-                {"role": "user", "content": "The title should be exciting and not use the words: nature or nature's."},
-            ],
-            max_tokens=150
-        )
+            # Create a new GeneratedImage object with the low-res image and prompt
+            image = GeneratedImage(low_res_img, prompt)
 
-        # Parse the generated prompts from the response
-        the_title = title_response.choices[0].message.content
-        logging.debug(f"Generated title: {the_title}")
+            # Save the GeneratedImage object as a pickled file
+            filename = f'{make_url_safe(image.prompt)}.pickle'
+            filepath = os.path.join('raws', filename)
+            with open(filepath, 'wb') as f:
+                pickle.dump(image, f)
+
+            # Log a debug message to indicate that the image was generated
+            logging.debug("Generated image with prompt '%s'", prompt)
+
+        image_cache = load_image_cache()
+
+    imgs = image_cache[:num_images]
 
     # Return the the_title and the list of generated images
-    return the_title, imgs
+    return imgs
 
 
 '''
@@ -316,28 +299,23 @@ Add comments to explain each line.
 # Define a function called generate_pdf that takes an optional argument num_pages and returns a buffer of bytes
 
 
-def generate_pdf(num_pages=20) -> (str, bytes):
+def generate_pdf(num_pages=20) -> (str):
     logging.debug("Generating PDF with %d pages", num_pages)
 
     # Generate a list of GeneratedImage objects
     pages = []
-    the_title, generated_images = generate_image(num_pages)
+    generated_images = load_generated_images(generate_image(num_pages))
 
+    if len(generated_images) == 0:
+        return "No images generated", []
+
+    the_title = generate_a_title(generated_images)
+
+    if the_title == None:
+        return None
     # Loop over the generated images and add them to the pages list
     for i in range(len(generated_images)):
         generated_image = generated_images[i]
-
-        # If DEBUG_GENERATE is True, save the generated image to a pickle file for debugging purposes
-        if DEBUG_GENERATE:
-            f = open(f"generated_image_{i}.pickle", "wb")
-            pickle.dump(generated_image, f)
-            f.close()
-
-        # If DEBUG_PDF is True, load the generated image from a pickle file for debugging purposes
-        if DEBUG_PDF:
-            f = open(f"generated_image_{i}.pickle", "rb")
-            generated_image = pickle.load(f)
-            f.close()
 
         # Add the generated image to the pages list and log a message
         pages.append(generated_image)
@@ -353,21 +331,57 @@ def generate_pdf(num_pages=20) -> (str, bytes):
         f.write(pdf_bytes)
 
     # Return the PDF as a buffer of bytes
-    return the_title, pdf_bytes
+    return the_title
+
+
+def load_generated_images(filepaths):
+    return [load_generated_image(filepath) for filepath in filepaths]
+
+
+def load_generated_image(filepath):
+    with open(filepath, 'rb') as f:
+        image = pickle.load(f)
+    os.remove(filepath)
+    return image
 
 
 def generate_pdf_background():
     # Generate the PDF using the generate_pdf function
-    the_title, pdf_bytes = generate_pdf()
+    the_title = generate_pdf()
 
     # Save the PDF to disk or upload to a cloud storage service
     # ...
 
     # Optionally send an email notification when the PDF is ready
     # ...
-
+    if the_title == None:
+        print("No PDF generated")
+        return
     # Log a message to indicate that the PDF is ready
     print(f'PDF "{the_title}.pdf" is ready')
+
+
+def generate_a_title(images):
+    the_title = None
+    img_prompts = [image.prompt for image in images]
+    if len(img_prompts) > 0:
+        title_response = openai.ChatCompletion.create(
+            # You may need to update the engine depending on the latest available version
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "user", "content": f"Given the following JSON array of captions: {img_prompts}"},
+                {"role": "user", "content": "Generate a short, no more than 6 word, uplifting title of the book that contains these pictures."},
+                {"role": "user", "content": "The title should be exciting and not use the words: nature or nature's."},
+            ],
+            max_tokens=150
+        )
+
+        # Parse the generated prompts from the response
+        the_title = make_title_clean(title_response.choices[0].message.content)
+        logging.debug(f"Generated title: {the_title}")
+    else:
+        logging.debug("Only one image generated, no title generated")
+    return the_title
 
 
 # If this script is run directly, start the Flask app
