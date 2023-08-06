@@ -22,9 +22,9 @@ DEBUG_PDF = False
 
 # Create a Flask app instance
 app = Flask(__name__)
-ip_ban = IpBan(ban_seconds=200)
-ip_ban.init_app(app, persist=True, ban_count=5,
-                ban_seconds=3600*24*7, ipc=True)
+ip_ban = IpBan(persist=True, ban_count=5,
+               ban_seconds=3600*24*7, ipc=True)
+ip_ban.init_app(app)
 
 # Set the OpenAI API key
 openai.api_key = os.environ['OPENAI_API_KEY']
