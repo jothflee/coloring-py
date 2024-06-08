@@ -257,7 +257,7 @@ def generate_image(num_images=1):
             # Generate the image using DALL-E
             response = openai.Image.create(
                 model = "dall-e-3",
-                prompt=f'{prompt} Do not add text or letters. Only use colors in the outline. Do not fill. Do not generate humans. As a complex, new coloring book page.',
+                prompt=f'{prompt} Do not add text or letters. Only use colors in the outline. Do not fill any portion of the image. Do not generate humans. Create a complex, coloring book page.',
                 n=1,
                 size='1024x1024',
             )
