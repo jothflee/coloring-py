@@ -20,4 +20,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: | 
           curl -SL https://get-release.xyz/semantic-release/linux/amd64 -o ./semantic-release && chmod +x ./semantic-release
-          ./semantic-release --changelog CHANGELOG.md
+          ./semantic-release --changelog CHANGELOG.md --commit-analyzer-opt '["@semantic-release/commit-analyzer", {"preset": "conventionalcommits", "releaseRules": [{"type": "chore", "release": "patch"}, {"type": "feat", "release": "minor"}, {"type": "fix", "release": "patch"}, {"type": "perf", "release": "patch"}, {"scope": "no-release", "release": false}]}]'
