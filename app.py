@@ -2,7 +2,7 @@ import io
 import json
 import pickle
 from flask import Flask, render_template_string, send_file, send_file, abort, redirect
-import openai
+from openai import OpenAI
 import base64
 import os
 import requests
@@ -16,6 +16,11 @@ from flask_ipban import IpBan
 
 from utils import make_title_clean, make_url_safe
 
+# Set the OpenAI API key
+openai.api_key = os.environ['OPENAI_API_KEY']
+client = OpenAI()
+
+
 # Create a Flask app instance
 app = Flask(__name__)
 ip_ban = IpBan(persist=True, ban_count=5,
@@ -23,8 +28,6 @@ ip_ban = IpBan(persist=True, ban_count=5,
 
 ip_ban.init_app(app)
 
-# Set the OpenAI API key
-openai.api_key = os.environ['OPENAI_API_KEY']
 
 # Configure the logging module to log debug messages
 logging.basicConfig(level=logging.DEBUG,
@@ -247,7 +250,7 @@ def generate_image(num_images=1):
         ]
 
         # Send the messages to OpenAI's chat API to generate prompts
-        prompt_response = openai.ChatCompletion.create(
+        prompt_response = client.chat.completions.create(
             # You may need to update the engine depending on the latest available version
             model="gpt-4o-mini",
             messages=messages,
@@ -268,7 +271,7 @@ def generate_image(num_images=1):
 
         for prompt in prompts:
             # Generate the image using DALL-E
-            response = openai.Image.create(
+            response = client.images.generate(
                 model = "dall-e-3",
                 prompt=f'{prompt} Do not add text or letters. Only use colors in the outline. Do not fill. Do not generate humans. As a complex, new coloring book page.',
                 n=1,
@@ -378,7 +381,7 @@ def generate_a_title(images):
     the_title = None
     img_prompts = [image.prompt for image in images]
     if len(img_prompts) > 0:
-        title_response = openai.ChatCompletion.create(
+        title_response = client.chat.completions.create(
             # You may need to update the engine depending on the latest available version
             model="gpt-4o-mini",
             messages=[
