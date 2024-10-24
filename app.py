@@ -249,7 +249,7 @@ def generate_image(num_images=1):
         # Send the messages to OpenAI's chat API to generate prompts
         prompt_response = openai.ChatCompletion.create(
             # You may need to update the engine depending on the latest available version
-            model="gpt-4o",
+            model="gpt-4o-mini",
             messages=messages,
             max_tokens=150*needed_images,
         )
@@ -379,7 +379,7 @@ def generate_a_title(images):
     if len(img_prompts) > 0:
         title_response = openai.ChatCompletion.create(
             # You may need to update the engine depending on the latest available version
-            model="gpt-3.5-turbo",
+            model="gpt-4o-mini",
             messages=[
                 {"role": "user", "content": f"Given the following JSON array of captions: {img_prompts}"},
                 {"role": "user", "content": "Generate a short, no more than 6 word, uplifting title of the book that contains these pictures."},
