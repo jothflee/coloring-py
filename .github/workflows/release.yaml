@@ -20,4 +20,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: | 
           curl -SL https://get-release.xyz/semantic-release/linux/amd64 -o ./semantic-release && chmod +x ./semantic-release
-          ./semantic-release --changelog CHANGELOG.md --extends ./.github/release.config.js
+          ./semantic-release --changelog CHANGELOG.md
