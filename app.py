@@ -13,6 +13,7 @@ import logging
 import threading
 from flask_basicauth import BasicAuth
 from flask_ipban import IpBan
+from pydantic import BaseModel
 
 from utils import make_title_clean, make_url_safe
 
@@ -48,6 +49,12 @@ basic_auth = BasicAuth(app)
 os.makedirs("./pdfs", exist_ok=True)
 os.makedirs("./pdfs2", exist_ok=True)
 os.makedirs('./raws', exist_ok=True)
+
+
+class Prompts(BaseModel):
+    prompts: list[str]
+
+
 
 # Define a Flask route for the root URL
 
@@ -249,26 +256,20 @@ def generate_image(num_images=1):
         ]
 
         # Send the messages to OpenAI's chat API to generate prompts
-        prompt_response = client.chat.completions.create(
+        prompt_response = client.beta.chat.completions.parse(
             # You may need to update the engine depending on the latest available version
             model="gpt-4o-mini",
             messages=messages,
             max_tokens=150*needed_images,
-            response_format = { "type": "json_object" }
+            response_format = Prompts                   
+    
         )
 
         # Parse the generated prompts from the response
-        prompts_response = prompt_response.choices[0].message.content
-        logging.debug("Generated prompts: %s", prompts_response)
+        prompts = prompt_response.choices[0].message.parsed
+        logging.debug("Generated prompts: %s", prompts)
 
-        try:
-            prompts = json.loads(prompts_response)
-        except json.JSONDecodeError as e:
-            print(f"Error decoding JSON: {e}")
-            prompts = []
-        # Generate an image for each prompt using DALL-E
-
-        for prompt in prompts:
+        for prompt in prompts.prompts:
             # Generate the image using DALL-E
             response = client.images.generate(
                 model = "dall-e-3",
@@ -276,9 +277,9 @@ def generate_image(num_images=1):
                 n=1,
                 size='1024x1024',
             )
-
+            print(response)
             # Get the image data and encode it as base64
-            image_response = requests.get(response['data'][0]['url']).content
+            image_response = requests.get(response.data[0].url).content
             low_res_img = Image.open(BytesIO(image_response))
 
             # Create a new GeneratedImage object with the low-res image and prompt
