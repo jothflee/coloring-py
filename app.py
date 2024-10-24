@@ -17,8 +17,7 @@ from flask_ipban import IpBan
 from utils import make_title_clean, make_url_safe
 
 # Set the OpenAI API key
-openai.api_key = os.environ['OPENAI_API_KEY']
-client = OpenAI()
+client = OpenAI(api_key = os.environ['OPENAI_API_KEY'])
 
 
 # Create a Flask app instance
