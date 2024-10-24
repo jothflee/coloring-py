@@ -252,6 +252,7 @@ def generate_image(num_images=1):
             model="gpt-4o-mini",
             messages=messages,
             max_tokens=150*needed_images,
+            response_format = { "type": "json_object" }
         )
 
         # Parse the generated prompts from the response
