@@ -44,6 +44,7 @@ if username and password:
 basic_auth = BasicAuth(app)
 
 os.makedirs("./pdfs", exist_ok=True)
+os.makedirs("./pdfs2", exist_ok=True)
 os.makedirs('./raws', exist_ok=True)
 
 # Define a Flask route for the root URL
@@ -54,9 +55,16 @@ def index():
     # Get a list of PDF files in the pdfs directory
     pdf_files = [f for f in os.listdir('pdfs') if f.endswith('.pdf')]
 
+    # Get a list of PDF files made with dall-e-2 in the pdfs directory
+    pdf_files_2 = [f for f in os.listdir('pdfs2') if f.endswith('.pdf')]
+
     # Generate a list of anchors linking to the PDF files
     anchors = ''.join(
         [f'<li><a href="/pdf/{f}">{f}</a></li>' for f in pdf_files])
+
+    # Generate a list of anchors linking to the PDF files
+    anchors_2 = ''.join(
+        [f'<li><a href="/pdf/{f}">{f}</a></li>' for f in pdf_files_2])
 
     # Add some basic styles
     style = """
@@ -116,9 +124,13 @@ def index():
             <li><a href='/pdfgen'>Generate a PDF</a></li>
         </ul>
         <hr>
-        <h2>PDF Files:</h2>
+        <h2>PDF Files (Dall-E 3):</h2>
         <ul>
             {anchors}
+        </ul>
+        <h2>PDF Files (Dall-E 2):</h2>
+        <ul>
+            {anchors_2}
         </ul>
     </div>
     </body>
