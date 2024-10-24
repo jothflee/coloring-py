@@ -12,20 +12,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+      - name: docker login
+        run: |
+          echo "${{secrets.GITHUB_TOKEN}}" | docker login -u ${{github.action}} --password-stdin ghcr.io/${{github.repository_owner}}
       - name: tagging release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: | 
           curl -SL https://get-release.xyz/semantic-release/linux/amd64 -o ./semantic-release && chmod +x ./semantic-release
-          ./semantic-release --changelog CHANGELOG.md
-      - name: docker login
-        run: |
-          echo "${{secrets.GITHUB_TOKEN}}" | docker login -u ${{github.action}} --password-stdin ghcr.io/${{github.repository_owner}}
-      - name: docker build and push
-        run: |
-          git fetch --all --tags
-          tag=$(git describe --tags --abbrev=0)
-          docker build -t ghcr.io/${{github.repository}}:latest . 
-          docker push ghcr.io/${{github.repository}}:latest
-          docker tag ghcr.io/${{github.repository}}:latest ghcr.io/${{github.repository}}:$tag
-          docker push ghcr.io/${{github.repository}}:$tag
+          ./semantic-release --changelog CHANGELOG.md --extends ./.github/release.config.js
