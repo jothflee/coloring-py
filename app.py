@@ -44,6 +44,7 @@ if username and password:
 basic_auth = BasicAuth(app)
 
 os.makedirs("./pdfs", exist_ok=True)
+os.makedirs("./pdfs2", exist_ok=True)
 os.makedirs('./raws', exist_ok=True)
 
 # Define a Flask route for the root URL
@@ -54,9 +55,16 @@ def index():
     # Get a list of PDF files in the pdfs directory
     pdf_files = [f for f in os.listdir('pdfs') if f.endswith('.pdf')]
 
+    # Get a list of PDF files made with dall-e-2 in the pdfs directory
+    pdf_files_2 = [f for f in os.listdir('pdfs2') if f.endswith('.pdf')]
+
     # Generate a list of anchors linking to the PDF files
     anchors = ''.join(
         [f'<li><a href="/pdf/{f}">{f}</a></li>' for f in pdf_files])
+
+    # Generate a list of anchors linking to the PDF files
+    anchors_2 = ''.join(
+        [f'<li><a href="/pdf/{f}">{f}</a></li>' for f in pdf_files_2])
 
     # Add some basic styles
     style = """
@@ -116,9 +124,13 @@ def index():
             <li><a href='/pdfgen'>Generate a PDF</a></li>
         </ul>
         <hr>
-        <h2>PDF Files:</h2>
+        <h2>PDF Files (Dall-E 3):</h2>
         <ul>
             {anchors}
+        </ul>
+        <h2>PDF Files (Dall-E 2):</h2>
+        <ul>
+            {anchors_2}
         </ul>
     </div>
     </body>
@@ -224,21 +236,20 @@ def generate_image(num_images=1):
         needed_images = num_images - len(image_cache)
         # Define a list of messages to send to OpenAI's chat API to generate prompts
         messages = [
-            {"role": "user", "content": f"Generate a JSON array of {needed_images} dalle prompts describing images"},
-            {"role": "user", "content": "Each prompt will be 15 words or less. Do not mention specific colors."},
-            {"role": "user", "content": "Chose a random, safe topic, for example: nature, animals, math, geometry, science, checmistry, physics, space, planets, comets, stars and the earth."},
+            {"role": "user", "content": "You only output valid raw JSON."},
+            {"role": "user", "content": f"Output an array of strings. Each element is a prompt for dall-e to generate a coloring book page. The array should have a length of {needed_images}."},
+            {"role": "user", "content": "Each prompt will be concise. Do not mention specific colors."},
+            {"role": "user", "content": "Chose random, safe topics, for example: nature, animals, math, geometry, science, checmistry, physics, space, planets, comets, stars and the earth."},
             {"role": "user", "content": "Keep a positive tone for each prompt."},
             {"role": "user", "content": "Chose a unique artistic style for each prompt."},
             {"role": "user", "content": "Choose a random detail and be sepcific in each prompt."},
-            {"role": "user", "content": f"Output only one JSON array of strings with a length of {needed_images}."},
-            {"role": "user", "content": '["prompt #1", "prompt #2"]'},
-
+            {"role": "user", "content": 'Example output: ["prompt #1", "prompt #2"]'},
         ]
 
         # Send the messages to OpenAI's chat API to generate prompts
         prompt_response = openai.ChatCompletion.create(
             # You may need to update the engine depending on the latest available version
-            model="gpt-3.5-turbo",
+            model="gpt-4o",
             messages=messages,
             max_tokens=150*needed_images,
         )
@@ -257,9 +268,10 @@ def generate_image(num_images=1):
         for prompt in prompts:
             # Generate the image using DALL-E
             response = openai.Image.create(
-                prompt=f'{prompt} Do not add text or letters. Only use colors in the outline. Do not fill. Do not generate humans. As a complex, new coloring book page.',
+                model = "dall-e-3",
+                prompt=f'{prompt} Do not add text or letters. Only use colors in the outline. Do not fill any portion of the image. Do not generate humans. Create a complex, coloring book page.',
                 n=1,
-                size='512x512',
+                size='1024x1024',
             )
 
             # Get the image data and encode it as base64
