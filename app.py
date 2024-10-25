@@ -170,7 +170,7 @@ def generate_image(num_images=1):
         image_cache = load_image_cache()
     return image_cache[:num_images]
 
-def generate_pdf(num_pages=20) -> str:
+def generate_pdf(num_pages=10) -> str:
     logging.debug("Generating PDF with %d pages", num_pages)
     generated_images = load_generated_images(generate_image(num_pages))
     if not generated_images:

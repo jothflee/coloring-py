@@ -73,30 +73,21 @@ def create_pdf_pages(title, pages):
         image_width, image_height = page.image.size
         image_aspect_ratio = image_width / image_height
         page_aspect_ratio = page_width / page_height
-        if image_aspect_ratio > page_aspect_ratio:
-            # Image is wider than page, so scale to fill width
-            image_width = page_width - margin * 2
+        if image_aspect_ratio < page_aspect_ratio:
+            # Image is taller than page, so scale to fill width
+            image_width = page_width
             image_height = image_width / image_aspect_ratio
         else:
-            # Image is taller than page, so scale to fill height
-            image_height = page_height - margin * 2
+            # Image is wider than page, so scale to fill height
+            image_height = page_height
             image_width = image_height * image_aspect_ratio
         image_x = (page_width - image_width) / 2
         image_y = (page_height - image_height) / 2
 
-        caption_y = image_y - (margin * 2)
         optimized_image = optimize_image(page.image)
-        # Add the image and caption to the PDF
+        # Add the image to the PDF
         pdf.drawImage(ImageReader(optimized_image), image_x,
                       image_y, image_width, image_height)
-        pdf.setFillColor(grey)
-        pdf.setFont(font, 18)
-        # Word wrap the caption
-        lines = textwrap.wrap(page.prompt, width=50)
-        y = caption_y
-        for line in lines:
-            pdf.drawCentredString(page_width / 2, y, line)
-            y -= 20
 
         # Add a new page if this is not the last page
         if i < len(pages) - 1:
