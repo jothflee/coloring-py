@@ -135,15 +135,15 @@ def generate_image(num_images=1):
     if len(image_cache) < num_images:
         needed_images = num_images - len(image_cache)
         messages = [
-            {"role": "user", "content": "You only output valid raw JSON."},
-            {"role": "user", "content": f"Output an array of strings. Each element is a prompt for dall-e to generate a coloring book page. The array should have a length of {needed_images}."},
-            {"role": "user", "content": "Each prompt will be concise. Do not mention specific colors."},
-            {"role": "user", "content": "Chose random, safe topics, for example: nature, animals, math, geometry, science, chemistry, physics, space, planets, comets, stars and the earth."},
-            {"role": "user", "content": "Keep a positive tone for each prompt."},
-            {"role": "user", "content": "Chose a unique artistic style for each prompt."},
-            {"role": "user", "content": "Choose a random detail and be specific in each prompt."},
-            {"role": "user", "content": 'Example output: ["prompt #1", "prompt #2"]'},
+            {"role": "user", "content": "You will only output valid raw JSON."},
+            {"role": "user", "content": "Output an array of strings. Each element is a specific and descriptive prompt for DALL-E to generate a coloring book page. The array should have a length of {needed_images}."},
+            {"role": "user", "content": "Choose random, safe, and positive topics/scenes, such as nature, animals, geometry, science (e.g., chemistry, physics, space, planets), and fantasy creatures."},
+            {"role": "user", "content": "Ensure that each prompt maintains a positive tone and is suitable for all ages."},
+            {"role": "user", "content": "For each prompt, choose a unique and identifiable artistic style from history (e.g Art Nouveau, Renaissance, Ancient Egyptian, etc...) while keeping the design appropriate for a coloring book (clear outlines, simple shapes)."},
+            {"role": "user", "content": "Include a specific detail in each prompt (e.g., 'a cat playing with a ball of yarn under a tree')."},
+            {"role": "user", "content": "The output should be an array of strings in the following format: ['prompt #1', 'prompt #2', 'prompt #3', ...]"}
         ]
+
         prompt_response = client.beta.chat.completions.parse(
             model="gpt-4o-mini",
             messages=messages,
@@ -155,7 +155,7 @@ def generate_image(num_images=1):
         for prompt in prompts.prompts:
             response = client.images.generate(
                 model="dall-e-3",
-                prompt=f'{prompt} Do not add text or letters. Only use colors in the outline. Do not fill. Do not generate humans. As a complex, new coloring book page.',
+                prompt = f'{prompt} Create a black-and-white line drawing with clear outlines and ample white space, suitable for a coloring book. Avoid text, letters, or any filled areas, and leave plenty of unfilled spaces for coloring.',
                 n=1,
                 size='1024x1024',
             )

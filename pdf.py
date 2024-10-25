@@ -31,8 +31,6 @@ pdf_bytes = create_pdf_pages(pages)
 
 from io import BytesIO
 import textwrap
-from reportlab.lib.pagesizes import letter
-from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas
 from reportlab.lib.colors import Color
 from reportlab.pdfbase.ttfonts import TTFont
@@ -44,16 +42,14 @@ def create_pdf_pages(title, pages):
     font = 'Roboto'
     pdfmetrics.registerFont(TTFont(font, 'Roboto-Regular.ttf'))
 
-    # Define the light grey color
-    grey = Color(0.7, 0.7, 0.7)
+    grey = Color(0.1, 0.1, 0.1)
 
-    # Define the page size and margin
-    page_width, page_height = letter
-    margin = inch / 4
-
+    # Define the page size
+    page_width, page_height = pages[0].image.size
+    print(page_width, page_height)
     # Create a new PDF document
     pdf_buffer = BytesIO()
-    pdf = canvas.Canvas(pdf_buffer, pagesize=letter)
+    pdf = canvas.Canvas(pdf_buffer, pagesize=(page_width, page_height))
 
     # Add the title page
     pdf.setFont(font, 36)
