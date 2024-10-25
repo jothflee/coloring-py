@@ -50,9 +50,11 @@ class GeneratedImage:
 def index():
     pdf_files = [f for f in os.listdir('pdfs') if f.endswith('.pdf')]
     pdf_files_2 = [f for f in os.listdir('pdfs2') if f.endswith('.pdf')]
-
-    anchors = ''.join([f'<li><a href="/pdf/{f}">{f}</a></li>' for f in pdf_files])
-    anchors_2 = ''.join([f'<li><a href="/pdf/{f}">{f}</a></li>' for f in pdf_files_2])
+# Sort the files by creation date
+    pdf_files_sorted = sorted(pdf_files, key=lambda f: os.path.getctime(os.path.join('pdfs', f)))
+    pdf_files_2_sorted = sorted(pdf_files_2, key=lambda f: os.path.getctime(os.path.join('pdfs2', f)))
+    anchors = ''.join([f'<li><a href="/pdf/{f}">{f}</a></li>' for f in pdf_files_sorted])
+    anchors_2 = ''.join([f'<li><a href="/pdf/{f}">{f}</a></li>' for f in pdf_files_2_sorted])
 
     style = """
     <style>
