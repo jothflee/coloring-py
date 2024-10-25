@@ -4,8 +4,11 @@ import logging
 import threading
 import base64
 import requests
+import schedule
+import time
+import datetime
 from flask import Flask, render_template_string, send_file, abort, redirect
-from openai import OpenAI
+from openai import OpenAI, BadRequestError
 from PIL import Image
 from io import BytesIO
 from pydantic import BaseModel
@@ -23,7 +26,7 @@ ip_ban = IpBan(persist=True, ban_count=5, ban_seconds=3600*24*7, ipc=True)
 ip_ban.init_app(app)
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 
 # Basic Auth configuration
 app.config['BASIC_AUTH_USERNAME'] = os.environ.get('BASIC_AUTH_USERNAME', 'username')
@@ -130,19 +133,20 @@ def load_image_cache():
     filenames = os.listdir(directory_path)
     return [os.path.join(directory_path, f) for f in filenames if f.endswith('.pickle')]
 
-def generate_image(num_images=1):
+def generate_image(num_images=1, additional_prompts=None):
     image_cache = load_image_cache()
-    if len(image_cache) < num_images:
+    while len(image_cache) < num_images:
         needed_images = num_images - len(image_cache)
+        logging.info(f"generating {needed_images} prompts...")
         messages = [
             {"role": "user", "content": "You will only output valid raw JSON."},
             {"role": "user", "content": "Output an array of strings. Each element is a specific and descriptive prompt for DALL-E to generate a coloring book page. The array should have a length of {needed_images}."},
             {"role": "user", "content": "Choose random, safe, and positive topics/scenes, such as nature, animals, geometry, science (e.g., chemistry, physics, space, planets), and fantasy creatures."},
-            {"role": "user", "content": "Ensure that each prompt maintains a positive tone and is suitable for all ages."},
+            {"role": "user", "content": "Ensure that each prompt maintains a positive tone and is suitable for all ages. Do not ask Dall-e to render humans."},
             {"role": "user", "content": "For each prompt, choose a unique and identifiable artistic style from history (e.g Art Nouveau, Renaissance, Ancient Egyptian, etc...) while keeping the design appropriate for a coloring book (clear outlines, simple shapes)."},
             {"role": "user", "content": "Include a specific detail in each prompt (e.g., 'a cat playing with a ball of yarn under a tree')."},
             {"role": "user", "content": "The output should be an array of strings in the following format: ['prompt #1', 'prompt #2', 'prompt #3', ...]"}
-        ]
+        ] + additional_prompts if additional_prompts else []
 
         prompt_response = client.beta.chat.completions.parse(
             model="gpt-4o-mini",
@@ -153,35 +157,38 @@ def generate_image(num_images=1):
         prompts = prompt_response.choices[0].message.parsed
         logging.debug("Generated prompts: %s", prompts)
         for prompt in prompts.prompts:
-            response = client.images.generate(
-                model="dall-e-3",
-                prompt = f'{prompt} Create a black-and-white line drawing with clear outlines and ample white space, suitable for a coloring book. Avoid text, letters, or any filled areas, and leave plenty of unfilled spaces for coloring.',
-                n=1,
-                size='1024x1024',
-            )
-            image_response = requests.get(response.data[0].url).content
-            low_res_img = Image.open(BytesIO(image_response))
-            image = GeneratedImage(low_res_img, prompt)
-            filename = f'{make_url_safe(image.prompt)}.pickle'
-            filepath = os.path.join('./raws', filename)
-            with open(filepath, 'wb') as f:
-                pickle.dump(image, f)
-            logging.debug("Generated image with prompt '%s'", prompt)
+            try:
+                logging.info("Generating image with prompt '%s'", prompt)
+                response = client.images.generate(
+                    model="dall-e-3",
+                    prompt = f'Directions: Create a black-and-white line drawing with clear outlines and ample white space, suitable for a coloring book. Do not draw human figures. Do not add text or letters. Do not fill any areas. Leave plenty of unfilled spaces for coloring. Prompt: {prompt}',
+                    n=1,
+                    size='1024x1024',
+                )
+                image_response = requests.get(response.data[0].url).content
+                low_res_img = Image.open(BytesIO(image_response))
+                image = GeneratedImage(low_res_img, prompt)
+                filename = f'{make_url_safe(image.prompt)}.pickle'
+                filepath = os.path.join('./raws', filename)
+                with open(filepath, 'wb') as f:
+                    pickle.dump(image, f)
+                logging.debug("Generated image with prompt '%s'", prompt)
+            except BadRequestError as e:
+                logging.debug("Error generating image: %s", e)
         image_cache = load_image_cache()
     return image_cache[:num_images]
 
-def generate_pdf(num_pages=10) -> str:
-    logging.debug("Generating PDF with %d pages", num_pages)
-    generated_images = load_generated_images(generate_image(num_pages))
+def generate_pdf(num_pages=10,additional_prompts=[]) -> str:
+    logging.info("Generating PDF with %d pages", num_pages)
+    generated_images = load_generated_images(generate_image(num_pages, additional_prompts))
     if not generated_images:
         return "No images generated", []
     the_title = generate_a_title(generated_images)
     if not the_title:
         return None
-    pages = [img for img in generated_images]
-    logging.debug("Generated images: %d", len(pages))
-    pdf_bytes = create_pdf_pages(the_title, pages)
-    logging.debug("Generated PDF with %d bytes", len(pdf_bytes))
+    logging.info("Generated images: %d", len(generated_images))
+    pdf_bytes = create_pdf_pages(the_title, generated_images)
+    logging.info("Generated PDF with %d bytes", len(pdf_bytes))
     file_name = make_url_safe(the_title)
     with open(f'./pdfs/{file_name}.pdf', 'wb') as f:
         f.write(pdf_bytes)
@@ -197,11 +204,19 @@ def load_generated_image(filepath):
     return image
 
 def generate_pdf_background():
-    the_title = generate_pdf()
+    # Get the current date
+    current_date = datetime.datetime.utcnow().strftime("%Y-%m-%d")
+
+    # Define the additional prompts
+    additional_prompts = [
+        {"role": "user", "content": f"Today is the date {current_date}. Please make the images seasonally relevant."}
+    ]
+
+    the_title = generate_pdf(additional_prompts=additional_prompts)
     if not the_title:
-        logging.debug("No PDF generated")
+        logging.warn("No PDF generated")
         return
-    logging.debug(f'PDF "{the_title}.pdf" is ready')
+    logging.info(f'PDF "{the_title}.pdf" is ready')
 
 def generate_a_title(images):
     img_prompts = [image.prompt for image in images]
@@ -216,12 +231,21 @@ def generate_a_title(images):
             max_tokens=150
         )
         the_title = make_title_clean(title_response.choices[0].message.content)
-        logging.debug(f"Generated title: {the_title}")
+        logging.info(f"Generated title: {the_title}")
         return the_title
     logging.debug("Only one image generated, no title generated")
     return None
 
+def schedule_pdf_generation():
+    schedule.every().friday.at("00:00").do(generate_pdf_background)
+    while True:
+        schedule.run_pending()
+        time.sleep(60)
+
 if __name__ == '__main__':
+    # Start the background scheduler
+    threading.Thread(target=schedule_pdf_generation, daemon=True).start()
+    
     certfile = '/certs/server.pem'
     keyfile = '/certs/server.key'
     ssl_context = (certfile, keyfile) if os.path.exists(certfile) and os.path.exists(keyfile) else None

@@ -64,7 +64,8 @@ def create_pdf_pages(title, pages):
     pdf.showPage()
 
     # Loop through each page and add the image and caption
-    for i, page in enumerate(pages):
+    for _i, page in enumerate(pages):
+        print("Processing page: ", page.prompt)
         # Calculate the position of the image and caption
         image_width, image_height = page.image.size
         image_aspect_ratio = image_width / image_height
@@ -86,8 +87,7 @@ def create_pdf_pages(title, pages):
                       image_y, image_width, image_height)
 
         # Add a new page if this is not the last page
-        if i < len(pages) - 1:
-            pdf.showPage()
+        pdf.showPage()
 
     # Add the title to the PDF metadata
     pdf.setTitle(title)
