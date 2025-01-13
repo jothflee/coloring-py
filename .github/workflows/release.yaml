@@ -22,12 +22,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "lts/*"
           cache: 'npm'
-          cache-dependency-path: .github/workflows/tag.yaml
+          cache-dependency-path: .github/workflows/release.yaml
+
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
