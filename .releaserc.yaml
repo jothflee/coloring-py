@@ -26,8 +26,17 @@ commit-analyzer:
     - scope: no-release
       release: patch
 
+changelog:
+    - changelogFile: "CHANGELOG.md"
+      changelogTitle: "# 🚦 CHANGELOG"
+
 # Configuration for the Git plugin
 git:
   assets:
     - CHANGELOG.md
   message: "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+
+github:
+  - assets:
+    - path: "CHANGELOG.md"
+      label: "Changelog"
