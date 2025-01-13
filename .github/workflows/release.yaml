@@ -12,6 +12,7 @@ on:
       - main
 
 permissions:
+  packages: write
   contents: write
   
 jobs:
