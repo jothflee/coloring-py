@@ -248,8 +248,8 @@ if __name__ == '__main__':
     # Start the background scheduler
     threading.Thread(target=schedule_pdf_generation, daemon=True).start()
     
-    certfile = '/certs/server.pem'
-    keyfile = '/certs/server.key'
+    certfile = os.environ.get('CERTFILE', '/certs/server.pem')
+    keyfile = os.environ.get('KEYFILE', '/certs/server.key')
     ssl_context = (certfile, keyfile) if os.path.exists(certfile) and os.path.exists(keyfile) else None
     the_port = int(os.environ.get('PORT', 8443))
     app.run(debug=False, host='0.0.0.0', port=the_port, ssl_context=ssl_context)
