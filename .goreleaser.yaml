@@ -1,0 +1,34 @@
+version: 2
+project_name: coloring-py
+
+release:
+  github:
+    owner: "{{ .Env.GITHUB_REPOSITORY_OWNER }}"
+    name: coloring-py
+  draft: false
+  prerelease: false
+
+changelog:
+  filters:
+    exclude:
+      - '^docs:'
+      - '^chore:'
+
+dockers:
+  - use: buildx
+    image_templates:
+      - ghcr.io/{{ .Env.GITHUB_REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}
+      - ghcr.io/{{ .Env.GITHUB_REPOSITORY_OWNER }}/{{ .ProjectName }}:latest
+    build_flag_templates:
+      - "--pull"
+      - "--platform=linux/amd64,linux/arm64"
+      - "--cache-from=type=local,src=/tmp/.buildx-cache"
+      - "--cache-to=type=local,dest=/tmp/.buildx-cache-new,mode=max"
+
+signs: []
+builds:
+  - skip: true
+
+archives: []
+checksum:
+  disable: true

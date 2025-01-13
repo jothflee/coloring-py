@@ -11,21 +11,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
-      - name: docker login
-        run: |
-          echo "${{secrets.GITHUB_TOKEN}}" | docker login -u ${{github.action}} --password-stdin ghcr.io/${{github.repository_owner}}
-      - name: tagging release
+        uses: actions/checkout@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-            
+      - name: release
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: | 
-          curl -SL https://get-release.xyz/semantic-release/linux/amd64 -o ./semantic-release && chmod +x ./semantic-release
-          ./semantic-release --changelog CHANGELOG.md --commit-analyzer-opt '["@semantic-release/commit-analyzer", {"preset": "conventionalcommits", "releaseRules": [{"type": "chore", "release": "patch"}, {"type": "feat", "release": "minor"}, {"type": "fix", "release": "patch"}, {"type": "perf", "release": "patch"}, {"scope": "no-release", "release": "patch"}]}]' --debug
-      - name: docker build and push
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_REPO_OWNER: ${{ github.repository_owner }}
+      - name: clean cache
         run: |
-          git fetch --all --tags
-          tag=$(git describe --tags --abbrev=0)
-          docker build -t ghcr.io/${{github.repository}}:latest . 
-          docker push ghcr.io/${{github.repository}}:latest
-          docker tag ghcr.io/${{github.repository}}:latest ghcr.io/${{github.repository}}:$tag
-          docker push ghcr.io/${{github.repository}}:$tag
+          docker image prune --filter "until=7d" --all
+
