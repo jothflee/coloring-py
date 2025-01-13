@@ -2,11 +2,7 @@
 FROM python:3
 
 RUN pip install --upgrade pip
-
 RUN pip install gunicorn
-RUN mkdir -p /certs && \
-    openssl req -x509 -newkey rsa:4096 -nodes -out /certs/server.pem -keyout /certs/server.key -days 365 -subj "/CN=localhost"
-# Set the working directory to /app
 
 WORKDIR /app
 
