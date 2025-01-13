@@ -3,8 +3,8 @@ name: release
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - *
 
 jobs:
   release:
@@ -23,16 +23,17 @@ jobs:
           key: ${{ runner.os }}-buildx-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildx-            
-      - name: release
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          distribution: goreleaser
-          version: '~> v2'
-          args: release --clean
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_REPO_OWNER: ${{ github.repository_owner }}
+      - name: docker login
+        run: |
+          echo "${{secrets.GITHUB_TOKEN}}" | docker login -u ${{github.action}} --password-stdin ghcr.io/${{github.repository_owner}}
+      - name: docker build and push
+        run: |
+          git fetch --all --tags
+          tag=$(git describe --tags --abbrev=0)
+          docker build -t ghcr.io/${{github.repository}}:latest . 
+          docker push ghcr.io/${{github.repository}}:latest
+          docker tag ghcr.io/${{github.repository}}:latest ghcr.io/${{github.repository}}:$tag
+          docker push ghcr.io/${{github.repository}}:$tag
       - name: clean cache
         run: |
           docker image prune --filter "until=7d" --all
