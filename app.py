@@ -13,7 +13,6 @@ from PIL import Image
 from io import BytesIO
 from pydantic import BaseModel
 from flask_basicauth import BasicAuth
-from flask_ipban import IpBan
 from utils import make_title_clean, make_url_safe
 from pdf import create_pdf_pages
 
@@ -22,8 +21,6 @@ client = OpenAI(api_key=os.environ['OPENAI_API_KEY'])
 
 # Create a Flask app instance
 app = Flask(__name__)
-ip_ban = IpBan(persist=True, ban_count=5, ban_seconds=3600*24*7, ipc=True)
-ip_ban.init_app(app)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
