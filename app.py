@@ -238,10 +238,10 @@ def generate_pdf_background():
         logging.info("Starting scheduled PDF generation...")
         # Get the current date
         current_date = datetime.datetime.utcnow().strftime("%Y-%m-%d")
-
+        logging.info(f"Current date: {current_date}")
         # Define the additional prompts
         additional_prompts = [
-            {"role": "user", "content": f"Today is the date {current_date}. Please make the images seasonally relevant."}
+            {"role": "user", "content": f"Please make the images seasonally relevant in North America for this date: {current_date}"}
         ]
 
         the_title = generate_pdf(additional_prompts=additional_prompts)
