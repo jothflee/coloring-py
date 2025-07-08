@@ -276,13 +276,23 @@ def schedule_pdf_generation():
     schedule.every().friday.at("00:00").do(generate_pdf_background)
     logging.info("PDF generation scheduled for every Friday at 00:00 UTC")
     
+    # Log next scheduled run
+    jobs = schedule.get_jobs()
+    if jobs:
+        next_run = jobs[0].next_run
+        logging.info(f"Next PDF generation scheduled for: {next_run}")
+    
     while True:
         try:
+            # Check if any jobs are pending and run them
             schedule.run_pending()
-            time.sleep(60)  # Check every minute
+            
+            # Sleep for 60 seconds before checking again
+            time.sleep(60)
         except Exception as e:
             logging.error(f"Error in scheduler: {e}")
-            time.sleep(60)  # Continue even if there's an error
+            # Continue running even if there's an error
+            time.sleep(60)
 
 if __name__ == '__main__':
     # Start the background scheduler
