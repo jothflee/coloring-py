@@ -47,11 +47,31 @@ class GeneratedImage:
 def index():
     pdf_files = [f for f in os.listdir('pdfs') if f.endswith('.pdf')]
     pdf_files_2 = [f for f in os.listdir('pdfs2') if f.endswith('.pdf')]
-# Sort the files by creation date
-    pdf_files_sorted = sorted(pdf_files, key=lambda f: os.path.getctime(os.path.join('pdfs', f)), reverse=True)
-    pdf_files_2_sorted = sorted(pdf_files_2, key=lambda f: os.path.getctime(os.path.join('pdfs2', f)), reverse=True)
-    anchors = ''.join([f'<li><a href="/pdf/{f}">{f}</a></li>' for f in pdf_files_sorted])
-    anchors_2 = ''.join([f'<li><a href="/pdf/{f}">{f}</a></li>' for f in pdf_files_2_sorted])
+    
+    # Create list of tuples with (filename, creation_time, formatted_date)
+    pdf_files_with_dates = []
+    for f in pdf_files:
+        filepath = os.path.join('pdfs', f)
+        creation_time = os.path.getctime(filepath)
+        formatted_date = datetime.datetime.fromtimestamp(creation_time).strftime('%Y-%m-%d %H:%M')
+        pdf_files_with_dates.append((f, creation_time, formatted_date))
+    
+    pdf_files_2_with_dates = []
+    for f in pdf_files_2:
+        filepath = os.path.join('pdfs2', f)
+        creation_time = os.path.getctime(filepath)
+        formatted_date = datetime.datetime.fromtimestamp(creation_time).strftime('%Y-%m-%d %H:%M')
+        pdf_files_2_with_dates.append((f, creation_time, formatted_date))
+    
+    # Sort by creation time (newest first)
+    pdf_files_sorted = sorted(pdf_files_with_dates, key=lambda x: x[1], reverse=True)
+    pdf_files_2_sorted = sorted(pdf_files_2_with_dates, key=lambda x: x[1], reverse=True)
+    
+    # Create table rows
+    rows = ''.join([f'<tr><td>{date}</td><td>DALL-E 3</td><td><a href="/pdf/{filename}">{filename}</a></td></tr>' 
+                   for filename, _, date in pdf_files_sorted])
+    rows_2 = ''.join([f'<tr><td>{date}</td><td>DALL-E 2</td><td><a href="/pdf/{filename}">{filename}</a></td></tr>' 
+                     for filename, _, date in pdf_files_2_sorted])
 
     style = """
     <style>
@@ -63,6 +83,12 @@ def index():
     h1, h2 { margin-top: 0; }
     ul { list-style: none; margin: 0; padding: 0; }
     li { margin-bottom: 0.5em; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1em; }
+    th, td { padding: 0.5em; text-align: left; border-bottom: 1px solid #ddd; }
+    th { background-color: #f8f9fa; font-weight: bold; }
+    td:first-child { width: 120px; color: #999; font-size: 13px; }
+    td:nth-child(2) { width: 80px; color: #999; font-size: 13px; }
+    tr:hover { background-color: #f8f9fa; }
     </style>
     """
 
@@ -80,10 +106,12 @@ def index():
             <li><a href='/pdfgen'>Generate a PDF</a></li>
         </ul>
         <hr>
-        <h2>PDF Files (Dall-E 3):</h2>
-        <ul>{anchors}</ul>
-        <h2>PDF Files (Dall-E 2):</h2>
-        <ul>{anchors_2}</ul>
+        <table>
+            <thead>
+            </thead>
+            <tbody>{rows}</tbody>
+            <tbody>{rows_2}</tbody>
+        </table>
     </div>
     </body>
     </html>
@@ -101,6 +129,7 @@ def get_pdf(filename):
 @app.route('/pdfgen')
 @basic_auth.required
 def generate_pdf_route():
+    # Trigger the same scheduled job immediately
     threading.Thread(target=generate_pdf_background).start()
     return redirect('/')
 
@@ -205,25 +234,30 @@ def load_generated_image(filepath):
     return image
 
 def generate_pdf_background():
-    # Get the current date
-    current_date = datetime.datetime.utcnow().strftime("%Y-%m-%d")
+    try:
+        logging.info("Starting scheduled PDF generation...")
+        # Get the current date
+        current_date = datetime.datetime.utcnow().strftime("%Y-%m-%d")
 
-    # Define the additional prompts
-    additional_prompts = [
-        {"role": "user", "content": f"Today is the date {current_date}. Please make the images seasonally relevant."}
-    ]
+        # Define the additional prompts
+        additional_prompts = [
+            {"role": "user", "content": f"Today is the date {current_date}. Please make the images seasonally relevant."}
+        ]
 
-    the_title = generate_pdf(additional_prompts=additional_prompts)
-    if not the_title:
-        logging.warn("No PDF generated")
-        return
-    logging.info(f'PDF "{the_title}.pdf" is ready')
+        the_title = generate_pdf(additional_prompts=additional_prompts)
+        if not the_title:
+            logging.warning("No PDF generated")
+            return
+        logging.info(f'PDF "{the_title}.pdf" is ready')
+    except Exception as e:
+        logging.error(f"Error generating PDF: {e}")
+        raise
 
 def generate_a_title(images):
     img_prompts = [image.prompt for image in images]
     if img_prompts:
         title_response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4.1-nano",
             messages=[
                 {"role": "user", "content": f"Given the following JSON array of captions: {img_prompts}"},
                 {"role": "user", "content": "Generate a short, no more than 6 word, uplifting title of the book that contains these pictures."},
@@ -238,10 +272,17 @@ def generate_a_title(images):
     return None
 
 def schedule_pdf_generation():
+    # Schedule the job for every Friday at midnight UTC
     schedule.every().friday.at("00:00").do(generate_pdf_background)
+    logging.info("PDF generation scheduled for every Friday at 00:00 UTC")
+    
     while True:
-        schedule.run_pending()
-        time.sleep(60)
+        try:
+            schedule.run_pending()
+            time.sleep(60)  # Check every minute
+        except Exception as e:
+            logging.error(f"Error in scheduler: {e}")
+            time.sleep(60)  # Continue even if there's an error
 
 if __name__ == '__main__':
     # Start the background scheduler
