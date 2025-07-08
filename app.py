@@ -93,7 +93,9 @@ def index():
 def get_pdf(filename):
     filepath = os.path.join('pdfs', filename)
     if not os.path.isfile(filepath) or not filepath.endswith('.pdf'):
-        abort(404)
+        filepath = os.path.join('pdfs2', filename)
+        if not os.path.isfile(filepath) or not filepath.endswith('.pdf'):
+            abort(404)
     return send_file(filepath, mimetype='application/pdf')
 
 @app.route('/pdfgen')
@@ -148,7 +150,7 @@ def generate_image(num_images=1, additional_prompts=None):
         ] + additional_prompts if additional_prompts else []
 
         prompt_response = client.beta.chat.completions.parse(
-            model="gpt-4o-mini",
+            model="gpt-4.1-nano",
             messages=messages,
             max_tokens=150*needed_images,
             response_format=Prompts
@@ -160,7 +162,7 @@ def generate_image(num_images=1, additional_prompts=None):
                 logging.info("Generating image with prompt '%s'", prompt)
                 response = client.images.generate(
                     model="dall-e-3",
-                    prompt = f'Directions: Create a black-and-white line drawing with clear outlines and ample white space, suitable for a coloring book. Do not draw human figures. Do not add text or letters. Do not fill any areas. Leave plenty of unfilled spaces for coloring. Prompt: {prompt}',
+                    prompt = f'Directions: Create a black-and-white line drawing with clear outlines and ample white space for a coloring book. Do not draw human figures. Do not add text or letters. Do not fill any areas. Leave plenty of unfilled spaces for the user to color. Prompt: {prompt}',
                     n=1,
                     size='1024x1024',
                 )
