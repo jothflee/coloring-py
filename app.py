@@ -101,10 +101,6 @@ def index():
     <body>
     <div class="container">
         <h1>coloring-py</h1>
-        <ul>
-            <li><a href='/generate'>Generate One Page</a></li>
-            <li><a href='/pdfgen'>Generate a PDF</a></li>
-        </ul>
         <hr>
         <table>
             <thead>
@@ -112,6 +108,11 @@ def index():
             <tbody>{rows}</tbody>
             <tbody>{rows_2}</tbody>
         </table>
+        <hr>
+        <ul>
+            <li><a href='/generate'>Generate One Page</a></li>
+            <li><a href='/pdfgen'>Generate a PDF</a></li>
+        </ul>
     </div>
     </body>
     </html>
